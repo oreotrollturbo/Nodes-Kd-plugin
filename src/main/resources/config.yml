@@ -1,0 +1,2 @@
+# If this is false players killing their own nation members won't count
+count-nation-team-kills: false
