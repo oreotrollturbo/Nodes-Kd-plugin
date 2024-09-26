@@ -10,6 +10,7 @@ import org.bukkit.entity.Player
 import org.oreo.nodeskd.NodesKd
 import org.oreo.nodeskd.NodesKd.Companion.killsList
 import org.oreo.nodeskd.data.PlayerKillData
+import phonon.nodes.Nodes
 import java.util.*
 
 class KdCommands (private val plugin: NodesKd) : CommandExecutor, TabCompleter {
@@ -35,10 +36,27 @@ class KdCommands (private val plugin: NodesKd) : CommandExecutor, TabCompleter {
                 playerKdr(sender, args[1])
             }
 
+            "town" -> {
+                if (args.size != 2) {
+                    townKd(sender)
+                    return true
+                }
+                townKd(sender, args[1])
+            }
+
+            "nation" -> {
+                if (args.size != 2){
+                    nationKd(sender)
+                    return true
+                }
+                nationKd(sender, args[1])
+            }
+
+
             "save" -> saveKd(sender)
 
             else -> {
-                sender.sendMessage("${ChatColor.RED}Unknown subcommand. Use /kd <most|player|best>")
+                sender.sendMessage("${ChatColor.RED}Unknown subcommand. Use /kd <most|player|best|town|nation> [player|town|nation]")
             }
         }
 
@@ -50,9 +68,9 @@ class KdCommands (private val plugin: NodesKd) : CommandExecutor, TabCompleter {
         if (args.size == 1) {
 
             val subCommands = if (sender.isOp){
-                listOf("most", "best", "player", "save")
+                listOf("most", "best", "player", "town", "nation", "save")
             } else {
-                listOf("most", "best", "player")
+                listOf("most", "best", "player", "town", "nation")
             }
 
             return subCommands.filter { it.startsWith(args[0], ignoreCase = true) }
@@ -174,6 +192,90 @@ class KdCommands (private val plugin: NodesKd) : CommandExecutor, TabCompleter {
         sender.sendMessage("${ChatColor.DARK_AQUA}Deaths : ${playerData.deaths}")
         sender.sendMessage("${ChatColor.DARK_AQUA}K/D : $kd")
     }
+
+    /**
+     * Sends the kill/death ratio (KDR) statistics of the specified town to the sender.
+     *
+     **/
+    fun townKd(sender: Player, townName: String? = null) {
+
+        val town = if (townName != null){
+            Nodes.getTownFromName(townName)
+        } else {
+            Nodes.getTownFromPlayer(sender)
+        }
+
+        if (town == null) {
+            sender.sendMessage("${ChatColor.RED}Town not found.")
+            return
+        }
+
+        val residents = town.residents
+
+        var kills = 0
+        var deaths = 0
+
+        for (resident in residents) {
+
+            val player = resident.player() ?: continue
+
+            val playerData = NodesKd.getPlayerData(player) ?: continue
+
+            kills += playerData.kills
+            deaths += playerData.deaths
+        }
+
+        val kdr = kills.toFloat() / deaths
+
+        sender.sendMessage("${ChatColor.GOLD}----$townName's stats----")
+        sender.sendMessage("${ChatColor.DARK_AQUA}Kills : $kills")
+        sender.sendMessage("${ChatColor.DARK_AQUA}Deaths : $deaths")
+        sender.sendMessage("${ChatColor.DARK_AQUA}K/D : $kdr")
+    }
+
+    /**
+     * Sends the kill/death ratio (KDR) statistics of the specified nation to the sender.
+     *
+     * @param sender The player who initiated the command.
+     * @param nationName The name of the nation whose KDR statistics are to be retrieved. If null, the sender's nation is used.
+     */
+    fun nationKd(sender: Player, nationName: String? = null) {
+
+        val nation = if (nationName != null){
+            Nodes.getNationFromName(nationName)
+        } else {
+            val resident = Nodes.getResident(sender)
+            resident?.nation
+        }
+
+        if (nation == null) {
+            sender.sendMessage("${ChatColor.RED}Nation not found.")
+            return
+        }
+
+        val residents = nation.residents
+
+        var kills = 0
+        var deaths = 0
+
+        for (resident in residents) {
+
+            val player = resident.player() ?: continue
+
+            val playerData = NodesKd.getPlayerData(player) ?: continue
+
+            kills += playerData.kills
+            deaths += playerData.deaths
+        }
+
+        val kdr = kills.toFloat() / deaths
+
+        sender.sendMessage("${ChatColor.GOLD}----$nationName's stats----")
+        sender.sendMessage("${ChatColor.DARK_AQUA}Kills : $kills")
+        sender.sendMessage("${ChatColor.DARK_AQUA}Deaths : $deaths")
+        sender.sendMessage("${ChatColor.DARK_AQUA}K/D : $kdr")
+    }
+
 
     /**
      * Saves the kd List
